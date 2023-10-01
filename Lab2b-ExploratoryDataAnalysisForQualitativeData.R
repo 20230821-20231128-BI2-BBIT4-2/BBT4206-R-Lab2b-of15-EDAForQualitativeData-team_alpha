@@ -246,6 +246,7 @@ blue_grey_colours_11 <- c("#27408E", "#304FAF", "#536CB5", "#6981c7", "#8da0db",
 blue_grey_colours_6 <- c("#27408E", "#304FAF", "#536CB5",
                          "#B9BCC2", "#A7AAAF", "#888A8E")
 
+
 blue_grey_colours_4 <- c("#27408E", "#536CB5",
                          "#B9BCC2", "#888A8E")
 
@@ -563,6 +564,45 @@ write.csv(evaluation_likes_and_wishes,
 # techniques like *lemmatization*, which considers the context and grammatical
 # structure of words, are often preferred for certain Natural Language
 # Processing (NLP) tasks.
+library(tidyverse)
+library(tidytext)
+library(tm)
+
+student_performance_dataset <- read_csv("data/20230412-20230719-BI1-BBIT4-1-StudentPerformanceDataset.CSV",
+                                        col_types = cols(
+                                          class_group = col_factor(levels = c("A", "B", "C")),
+                                          gender = col_factor(levels = c("1", "0")),
+                                          YOB = col_date(format = "%Y"),
+                                          regret_choosing_bi = col_factor(levels = c("1", "0")),  # Keep this as a factor
+                                          drop_bi_now = col_factor(levels = c("1", "0")),  # Keep this as a factor
+                                          # ... other columns ...
+                                          GRADE = col_factor(levels = c("A", "B", "C", "D", "E"))
+                                        ),
+                                        locale = locale())
+
+# Specify the text columns you want to tokenize
+text_columns <- c("regret_choosing_bi", "drop_bi_now")  # Replace with actual column names
+
+# Identify text columns and tokenize them
+tokenized_data <- student_performance_dataset %>%
+  select(all_of(text_columns)) %>%
+  mutate(across(where(is.character), ~unnest_tokens(.x, .x, token = "words")))  # Tokenization method may vary
+
+# Create a corpus from the tokenized data
+corpus <- Corpus(VectorSource(unlist(tokenized_data)))
+
+# Apply stemming to the corpus
+corpus_stemmed <- tm_map(corpus, stemDocument)
+
+# Convert the stemmed corpus back to a data frame
+tokenized_data_stemmed <- data.frame(
+  text = sapply(corpus_stemmed, as.character),
+  stringsAsFactors = FALSE
+)
+
+# View the tokenized and stemmed data
+View(tokenized_data_stemmed)
+
 
 ## Tokenization ----
 # The goal of text mining is to discover relevant information that is possibly
@@ -588,6 +628,33 @@ write.csv(evaluation_likes_and_wishes,
 # learning tasks. It forms the basis for many text processing techniques and is
 # essential for understanding and working with textual data in computational
 # applications.
+# Load the dplyr package
+# Load the necessary libraries
+library(tidyverse)
+library(tidytext)
+
+# Read the student performance dataset
+student_performance_dataset <- read_csv("data/20230412-20230719-BI1-BBIT4-1-StudentPerformanceDataset.CSV",
+                                        col_types = cols(
+                                          class_group = col_factor(levels = c("A", "B", "C")),
+                                          gender = col_factor(levels = c("1", "0")),
+                                          YOB = col_date(format = "%Y"),
+                                          # ... other columns ...
+                                          GRADE = col_factor(levels = c("A", "B", "C", "D", "E"))
+                                        ),
+                                        locale = locale())
+
+# Specify the text columns you want to tokenize
+text_columns <- c("regret_choosing_bi", "drop_bi_now")  # Replace with actual column names
+
+# Tokenize the text columns
+tokenized_data <- student_performance_dataset %>%
+  select(all_of(text_columns)) %>%
+  mutate(across(where(is.character), ~unnest_tokens(.x, text, token = "words")))  # Tokenization method may vary
+
+# View the tokenized data
+View(tokenized_data)
+
 
 ## Stopword Removal, Short Word Removal, and Censorship ----
 
@@ -679,6 +746,8 @@ word_count_per_group %>%
                   c("striped", "condensed", "bordered"),
                 full_width = FALSE)
 
+
+
 ## Evaluation Wishes ----
 ### Word count per gender ----
 word_count_per_gender_wishes <- evaluation_wishes_filtered %>%
@@ -733,6 +802,9 @@ evaluation_likes_filtered %>%
           Students") +
   coord_flip()
 
+
+
+
 ### Top 10 words for male students ----
 evaluation_likes_filtered %>%
   select(`Class Group`, `Student's Gender`,
@@ -749,6 +821,7 @@ evaluation_likes_filtered %>%
   ggtitle("Most Frequently Used Words in Course Evaluation Likes for Male
           Students") +
   coord_flip()
+
 
 ### Top 10 words per gender ----
 popular_words <- evaluation_likes_filtered %>%
@@ -805,6 +878,7 @@ evaluation_likes_filtered %>%
   ggtitle("Most Frequently Used Words in Course Evaluation Likes for Group B
           Students") +
   coord_flip()
+
 
 ### Top words for Group C students ----
 evaluation_likes_filtered %>%
@@ -900,6 +974,7 @@ popular_words %>%
                      breaks = popular_words$row,
                      labels = popular_words$`Wishes (tokenized)`) +
   coord_flip()
+
 
 ### Top words for Group A students ----
 evaluation_wishes_filtered %>%
@@ -1283,6 +1358,7 @@ top_popular_tfidf_words %>%
 # installed and their sources in the lockfile so that other team-members can
 # use renv::restore() to re-install the same package version in their local
 # machine during their initialization step.
+
 # renv::snapshot() # nolint
 
 # References ----

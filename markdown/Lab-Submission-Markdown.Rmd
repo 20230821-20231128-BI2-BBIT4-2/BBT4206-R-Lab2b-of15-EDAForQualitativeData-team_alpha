@@ -18,7 +18,7 @@ editor_options:
 +---------------------------------------------------+------------------------------------------------------------------------------------------------------+
 | **Student ID Numbers and Names of Group Members** | *\<list one student name, group, and ID per line; you should be between 2 and 5 members per group\>* |
 |                                                   |                                                                                                      |
-|                                                   | 1.  ID - Group - Name                                                                                |
+|                                                   | 1.  135232 - group_Alpha - Sadiki Hamisi                                                                                |
 |                                                   |                                                                                                      |
 |                                                   | 2.  ID - Group - Name                                                                                |
 |                                                   |                                                                                                      |
@@ -71,24 +71,178 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, eval = TRUE,
 Describe the code chunk here:
 
 ```{r Your Second Code Chunk}
-# Fill this with R related code that will be executed when the R markdown file
-# is rendered using knitR
+# Load the student performance data from a CSV file
+student_performance_dataset <- read_csv("data/20230412-20230719-BI1-BBIT4-1-StudentPerformanceDataset.CSV",
+  col_types = cols(
+    # Specify how to interpret different columns
+    class_group = col_factor(levels = c("A", "B", "C")),
+    gender = col_factor(levels = c("1", "0")),
+    YOB = col_date(format = "%Y"),
+    # ... (similar comments for other columns)
+    GRADE = col_factor(levels = c("A", "B", "C", "D", "E"))
+  ),
+  locale = locale()
+)
+
+# Display the data in a viewer
+View(student_performance_dataset)
+
 library(readr)
 ```
 
 Describe the next code chunk here:
 
 ```{r Your Third Code Chunk}
-# Fill this with other R related code that will be executed when the R markdown
-# file is rendered using knitR
+# Get the dimensions (number of rows and columns) of the dataset
+dim(student_performance_dataset)
+
+# Display the data types of each column in the dataset
+sapply(student_performance_dataset, class)
+
+# Provide a summary of the dataset's structure and data types
+glimpse(student_performance_dataset)
+
+# Generate summary statistics for the dataset, such as mean, median, and quartiles
+summary(student_performance_dataset)
+
 library(readr)
 ```
 
-## \<You Can Have a Sub-Title Here\>
+## code descriptions
+
+
+```{r Your Fifth Code Chunk}
+library(tidyverse)
+library(tidytext)
+library(tm)
+
+student_performance_dataset <- read_csv("data/20230412-20230719-BI1-BBIT4-1-StudentPerformanceDataset.CSV",
+                                        col_types = cols(
+                                          class_group = col_factor(levels = c("A", "B", "C")),
+                                          gender = col_factor(levels = c("1", "0")),
+                                          YOB = col_date(format = "%Y"),
+                                          regret_choosing_bi = col_factor(levels = c("1", "0")),  # Keep this as a factor
+                                          drop_bi_now = col_factor(levels = c("1", "0")),  # Keep this as a factor
+                                          # ... other columns ...
+                                          GRADE = col_factor(levels = c("A", "B", "C", "D", "E"))
+                                        ),
+                                        locale = locale())
+
+# Specify the text columns you want to tokenize
+text_columns <- c("regret_choosing_bi", "drop_bi_now")  # Replace with actual column names
+
+# Identify text columns and tokenize them
+tokenized_data <- student_performance_dataset %>%
+  select(all_of(text_columns)) %>%
+  mutate(across(where(is.character), ~unnest_tokens(.x, .x, token = "words")))  # Tokenization method may vary
+
+# Create a corpus from the tokenized data
+corpus <- Corpus(VectorSource(unlist(tokenized_data)))
+
+# Apply stemming to the corpus
+corpus_stemmed <- tm_map(corpus, stemDocument)
+
+# Convert the stemmed corpus back to a data frame
+tokenized_data_stemmed <- data.frame(
+  text = sapply(corpus_stemmed, as.character),
+  stringsAsFactors = FALSE
+)
+
+# View the tokenized and stemmed data
+View(tokenized_data_stemmed)
+library(readr)
+
+```
+
+
+```{r Your Fifth Code Chunk}
+library(tidyverse)
+library(tidytext)
+
+# Read the student performance dataset
+student_performance_dataset <- read_csv("data/20230412-20230719-BI1-BBIT4-1-StudentPerformanceDataset.CSV",
+                                        col_types = cols(
+                                          class_group = col_factor(levels = c("A", "B", "C")),
+                                          gender = col_factor(levels = c("1", "0")),
+                                          YOB = col_date(format = "%Y"),
+                                          # ... other columns ...
+                                          GRADE = col_factor(levels = c("A", "B", "C", "D", "E"))
+                                        ),
+                                        locale = locale())
+
+# Specify the text columns you want to tokenize
+text_columns <- c("regret_choosing_bi", "drop_bi_now")  # Replace with actual column names
+
+# Tokenize the text columns
+tokenized_data <- student_performance_dataset %>%
+  select(all_of(text_columns)) %>%
+  mutate(across(where(is.character), ~unnest_tokens(.x, text, token = "words")))  # Tokenization method may vary
+
+# View the tokenized data
+View(tokenized_data)
+
+library(readr)
+
+```
 
 ```{r Your Fourth Code Chunk}
-# Fill this with other R related code that will be executed when the R markdown
-# file is rendered using knitR
+# Create a new dataset 'evaluation_per_group_per_gender' based on 'student_performance_dataset'
+evaluation_per_group_per_gender <- student_performance_dataset %>%
+  # Add a new column 'Student's Gender' based on the 'gender' column
+  mutate(`Student's Gender` =
+           ifelse(gender == 1, "Male", "Female")) %>%
+  # Select specific columns for analysis
+  select(class_group, gender,
+         `Student's Gender`, `Average Course Evaluation Rating`) %>%
+  # Filter out rows with missing values in 'Average Course Evaluation Rating'
+  filter(!is.na(`Average Course Evaluation Rating`)) %>%
+  # Group the data by 'class_group' and 'Student's Gender'
+  group_by(class_group, `Student's Gender`) %>%
+  # Calculate the average of 'Average Course Evaluation Rating' for each group
+  summarise(average_evaluation_rating =
+              mean(`Average Course Evaluation Rating`)) %>%
+  # Arrange the data in descending order of average evaluation rating
+  arrange(desc(average_evaluation_rating), .by_group = TRUE)
+
+# Display the plain tabular output
+View(evaluation_per_group_per_gender)
+
+# Decorate the tabular output with custom styling
+evaluation_per_group_per_gender %>%
+  # Rename columns for better display
+  rename(`Class Group` = class_group) %>%
+  rename(`Average Course Evaluation Rating` = average_evaluation_rating) %>%
+  # Apply color formatting to the 'Average Course Evaluation Rating' column
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`) %>%
+  mutate(`Average Course Evaluation Rating` =
+           color_tile("#B9BCC2", "#536CB5")
+           (`Average Course Evaluation Rating`)) %>%
+  # Generate an HTML table with specified formatting options
+  kable("html", escape = FALSE, align = "c",
+        caption = "Course Evaluation Rating per Group and per Gender") %>%
+  # Apply additional styling to the HTML table
+  kable_styling(bootstrap_options =
+                  c("striped", "condensed", "bordered"),
+                full_width = FALSE)
+
+# Create a decorated visual bar chart
+evaluation_per_group_per_gender %>%
+  ggplot() +
+  # Create a bar chart with 'class_group' on the x-axis and 'average_evaluation_rating' on the y-axis
+  geom_bar(aes(x = class_group, y = average_evaluation_rating,
+               fill = `Student's Gender`),
+           stat = "identity", position = "dodge") +
+  # Expand the y-axis limits to start from 0
+  expand_limits(y = 0) +
+  # Apply a custom theme
+  blue_grey_theme() +
+  # Set fill colors for the bars
+  scale_fill_manual(values = blue_grey_colours_2) +
+  # Add a title and axis labels
+  ggtitle("Course Evaluation Rating per Group and per Gender") +
+  labs(x = "Class Group", y = "Average Rating")
+
 library(readr)
 ```
 
@@ -97,9 +251,717 @@ library(readr)
 Describe the code chunk here:
 
 ```{r Your Fifth Code Chunk}
-# Fill this with R related code that will be executed when the R markdown file
-# is rendered using knitR
+# Define a function called 'expand_contractions' that takes a document 'doc' as input
+expand_contractions <- function(doc) {
+  # Replace common contractions with their expanded forms using regular expressions
+  doc <- gsub("I'm", "I am", doc, ignore.case = TRUE)
+  doc <- gsub("you're", "you are", doc, ignore.case = TRUE)
+  doc <- gsub("he's", "he is", doc, ignore.case = TRUE)
+  doc <- gsub("she's", "she is", doc, ignore.case = TRUE)
+  doc <- gsub("it's", "it is", doc, ignore.case = TRUE)
+  doc <- gsub("we're", "we are", doc, ignore.case = TRUE)
+  doc <- gsub("they're", "they are", doc, ignore.case = TRUE)
+  doc <- gsub("I'll", "I will", doc, ignore.case = TRUE)
+  doc <- gsub("you'll", "you will", doc, ignore.case = TRUE)
+  doc <- gsub("he'll", "he will", doc, ignore.case = TRUE)
+  doc <- gsub("she'll", "she will", doc, ignore.case = TRUE)
+  doc <- gsub("it'll", "it will", doc, ignore.case = TRUE)
+  doc <- gsub("we'll", "we will", doc, ignore.case = TRUE)
+  doc <- gsub("they'll", "they will", doc, ignore.case = TRUE)
+  doc <- gsub("won't", "will not", doc, ignore.case = TRUE)
+  doc <- gsub("can't", "cannot", doc, ignore.case = TRUE)
+  doc <- gsub("n't", " not", doc, ignore.case = TRUE)
+  # Return the modified document
+  return(doc)
+}
+
 library(readr)
 ```
 
-**etc.** as per the lab submission requirements.
+```{r Your Fifth Code Chunk}
+# Create a new dataset 'evaluation_likes_and_wishes' based on 'student_performance_dataset'
+evaluation_likes_and_wishes <- student_performance_dataset %>%
+  # Add a new column 'Student's Gender' based on the 'gender' column
+  mutate(`Student's Gender` =
+           ifelse(gender == 1, "Male", "Female")) %>%
+  # Rename columns for better readability
+  rename(`Class Group` = class_group) %>%
+  rename(Likes = `D - 1. \nWrite two things you like about the teaching and learning in this unit so far.`) %>% # Rename a specific column
+  rename(Wishes = `D - 2. Write at least one recommendation to improve the teaching and learning in this unit (for the remaining weeks in the semester)`) %>% # Rename another specific column
+  # Select specific columns for analysis
+  select(`Class Group`,
+         `Student's Gender`, `Average Course Evaluation Rating`,
+         Likes, Wishes) %>%
+  # Filter out rows with missing values in 'Average Course Evaluation Rating'
+  filter(!is.na(`Average Course Evaluation Rating`)) %>%
+  # Arrange the data by 'Class Group'
+  arrange(`Class Group`)
+
+# Display the dataset before expanding contractions
+View(evaluation_likes_and_wishes)
+
+# Expand contractions in the 'Likes' and 'Wishes' columns
+evaluation_likes_and_wishes$Likes <- sapply(evaluation_likes_and_wishes$Likes, expand_contractions)
+evaluation_likes_and_wishes$Wishes <- sapply(evaluation_likes_and_wishes$Wishes, expand_contractions)
+
+# Display the dataset after expanding contractions
+View(evaluation_likes_and_wishes)
+# Display the 'evaluation_likes_and_wishes' dataset before any text processing
+View(evaluation_likes_and_wishes)
+
+# Remove special characters from the 'Likes' and 'Wishes' columns
+evaluation_likes_and_wishes$Likes <- sapply(evaluation_likes_and_wishes$Likes, remove_special_characters) # nolint
+evaluation_likes_and_wishes$Wishes <- sapply(evaluation_likes_and_wishes$Wishes, remove_special_characters) # nolint
+
+# Convert all text to lowercase to standardize the text
+evaluation_likes_and_wishes$Likes <- sapply(evaluation_likes_and_wishes$Likes, tolower) # nolint
+evaluation_likes_and_wishes$Wishes <- sapply(evaluation_likes_and_wishes$Wishes, tolower) # nolint
+
+# Display the 'evaluation_likes_and_wishes' dataset after removing special characters and converting to lowercase
+View(evaluation_likes_and_wishes)
+
+# [OPTIONAL] Save the modified dataset as a CSV file
+write.csv(evaluation_likes_and_wishes,
+          file = "data/evaluation_likes_and_wishes.csv",
+          row.names = FALSE)
+
+library(readr)
+```
+
+```{r Your Fifth Code Chunk}
+# Display the first 20 words from the 'stop_words' dataset
+head(sample(stop_words$word, 20), 20)
+
+# You can create a list of words to be censored
+undesirable_words <- c("wow", "lol", "none", "na")
+
+# Filter and process the 'Likes' column in the 'evaluation_likes_and_wishes' dataset
+evaluation_likes_filtered <- evaluation_likes_and_wishes %>%
+  # Tokenize (unnest) words from the 'Likes' column into a new variable 'word'
+  unnest_tokens(word, Likes) %>%
+  # Remove stopwords using an anti-join (excluding common words)
+  anti_join(stop_words, by = c("word")) %>%
+  # Keep only distinct words
+  distinct() %>%
+  # Filter out undesirable words
+  filter(!word %in% undesirable_words) %>%
+  # Include only words longer than 3 characters
+  filter(nchar(word) > 3) %>%
+  # Rename the 'word' variable for clarity
+  rename(`Likes (tokenized)` = word) %>%
+  # Focus on the 'Likes' only, removing 'Wishes'
+  select(-Wishes)
+
+# Save the filtered 'Likes' data as a CSV file
+write.csv(evaluation_likes_filtered,
+          file = "data/evaluation_likes_filtered.csv",
+          row.names = FALSE)
+
+# Perform similar processing for the 'Wishes' column
+evaluation_wishes_filtered <- evaluation_likes_and_wishes %>%
+  unnest_tokens(word, Wishes) %>%
+  anti_join(stop_words, by = c("word")) %>%
+  distinct() %>%
+  filter(!word %in% undesirable_words) %>%
+  filter(nchar(word) > 3) %>%
+  rename(`Wishes (tokenized)` = word) %>%
+  select(-Likes)
+
+# Save the filtered 'Wishes' data as a CSV file
+write.csv(evaluation_wishes_filtered,
+          file = "data/evaluation_wishes_filtered.csv",
+          row.names = FALSE)
+
+library(readr)
+```
+
+```{r Your Fifth Code Chunk}
+# Calculate the number of significant words in Evaluation Likes per Gender
+word_count_per_gender_likes <- evaluation_likes_filtered %>%
+  group_by(`Student's Gender`) %>%
+  summarise(num_words = n()) %>%
+  arrange(desc(num_words))
+
+# Add color bars to the 'num_words' column and rename it for clarity
+word_count_per_gender_likes %>%
+  mutate(num_words = color_bar("lightblue")(num_words)) %>%
+  rename(`Number of Words` = num_words) %>%
+  # Create an HTML table for the word count per gender
+  kable("html", escape = FALSE, align = "c",
+        caption = "Number of Significant Words in Evaluation Likes 
+                   per Gender: Minus contractions, special characters, 
+                   stopwords, short words, and censored words.") %>%
+  # Apply styling to the HTML table
+  kable_styling(bootstrap_options =
+                  c("striped", "condensed", "bordered"),
+                full_width = FALSE)
+
+# Calculate the number of significant words in Evaluation Likes per Group
+word_count_per_group <- evaluation_likes_filtered %>%
+  group_by(`Class Group`) %>%
+  summarise(num_words = n()) %>%
+  arrange(desc(num_words))
+
+# Add color bars to the 'num_words' column and rename it for clarity
+word_count_per_group %>%
+  mutate(num_words = color_bar("lightblue")(num_words)) %>%
+  rename(`Number of Words` = num_words) %>%
+  # Create an HTML table for the word count per group
+  kable("html", escape = FALSE, align = "c",
+        caption = "Number of Significant Words in Evaluation Likes 
+                   per Group: Minus contractions, special characters, 
+                   stopwords, short words, and censored words.") %>%
+  # Apply styling to the HTML table
+  kable_styling(bootstrap_options =
+                  c("striped", "condensed", "bordered"),
+                full_width = FALSE)
+
+library(readr)
+```
+
+```{r Your Fifth Code Chunk}
+# Calculate the number of significant words in Evaluation Wishes per Gender
+word_count_per_gender_wishes <- evaluation_wishes_filtered %>%
+  group_by(`Student's Gender`) %>%
+  summarise(num_words = n()) %>%
+  arrange(desc(num_words))
+
+# Add color bars to the 'num_words' column and rename it for clarity
+word_count_per_gender_wishes %>%
+  mutate(num_words = color_bar("lightblue")(num_words)) %>%
+  rename(`Number of Words` = num_words) %>%
+  # Create an HTML table for the word count per gender
+  kable("html", escape = FALSE, align = "c",
+        caption = "Number of Significant Words in Evaluation Wishes 
+                   per Gender: Minus contractions, special characters, 
+                   stopwords, short words, and censored words.") %>%
+  # Apply styling to the HTML table
+  kable_styling(bootstrap_options =
+                  c("striped", "condensed", "bordered"),
+                full_width = FALSE)
+
+# Calculate the number of significant words in Evaluation Wishes per Group
+word_count_per_group_wishes <- evaluation_wishes_filtered %>%
+  group_by(`Class Group`) %>%
+  summarise(num_words = n()) %>%
+  arrange(desc(num_words))
+
+# Add color bars to the 'num_words' column and rename it for clarity
+word_count_per_group_wishes %>%
+  mutate(num_words = color_bar("lightblue")(num_words)) %>%
+  rename(`Number of Words` = num_words) %>%
+  # Create an HTML table for the word count per group
+  kable("html", escape = FALSE, align = "c",
+        caption = "Number of Significant Words in Evaluation Wishes 
+                   per Group: Minus contractions, special characters, 
+                   stopwords, short words, and censored words.") %>%
+  # Apply styling to the HTML table
+  kable_styling(bootstrap_options =
+                  c("striped", "condensed", "bordered"),
+                full_width = FALSE)
+
+library(readr)
+```
+
+```{r Your Fifth Code Chunk}
+# Create a bar chart for the most frequently used words in Course Evaluation Likes for Female Students
+evaluation_likes_filtered %>%
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`, `Likes (tokenized)`) %>%
+  # Filter for Female students
+  filter(`Student's Gender` == "Female") %>%
+  # Count the frequency of each word, sorted in descending order
+  count(`Likes (tokenized)`, sort = TRUE) %>%
+  # Select the top 10 words
+  top_n(9) %>%
+  # Reorder the words based on frequency
+  mutate(`Likes (tokenized)` = reorder(`Likes (tokenized)`, n)) %>%
+  ggplot() +
+  # Create a bar chart
+  geom_col(aes(`Likes (tokenized)`, n), fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  xlab("Word in Course Evaluation") +
+  ylab("Number of Times Used (Term Frequency)") +
+  ggtitle("Most Frequently Used Words in Course Evaluation Likes for Female Students") +
+  coord_flip()
+
+# Create a bar chart for the most frequently used words in Course Evaluation Likes for Male Students
+evaluation_likes_filtered %>%
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`, `Likes (tokenized)`) %>%
+  # Filter for Male students
+  filter(`Student's Gender` == "Male") %>%
+  # Count the frequency of each word, sorted in descending order
+  count(`Likes (tokenized)`, sort = TRUE) %>%
+  # Select the top 10 words
+  top_n(9) %>%
+  # Reorder the words based on frequency
+  mutate(`Likes (tokenized)` = reorder(`Likes (tokenized)`, n)) %>%
+  ggplot() +
+  # Create a bar chart
+  geom_col(aes(`Likes (tokenized)`, n), fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  xlab("Word in Course Evaluation") +
+  ylab("Number of Times Used (Term Frequency)") +
+  ggtitle("Most Frequently Used Words in Course Evaluation Likes for Male Students") +
+  coord_flip()
+
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Create bar charts for the most frequently used words in Course Evaluation Likes per gender
+popular_words <- evaluation_likes_filtered %>%
+  group_by(`Student's Gender`) %>%
+  count(`Likes (tokenized)`, `Student's Gender`, sort = TRUE) %>%
+  slice(seq_len(10)) %>%
+  ungroup() %>%
+  arrange(`Student's Gender`, n) %>%
+  mutate(row = row_number())
+
+popular_words %>%
+  ggplot(aes(row, n, fill = `Student's Gender`)) +
+  geom_col(fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  labs(x = "Word in Course Evaluation", y = "Number of Times Used (Term Frequency)") +
+  ggtitle("Most Frequently Used Words in Course Evaluation Likes per Gender") +
+  facet_wrap(~`Student's Gender`, scales = "free") +
+  scale_x_continuous(
+    breaks = popular_words$row,
+    labels = popular_words$`Likes (tokenized)`) +
+  coord_flip()
+
+# Create bar charts for the most frequently used words in Course Evaluation Likes per Class Group
+### Top words for Group A students ----
+evaluation_likes_filtered %>%
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`, `Likes (tokenized)`) %>%
+  filter(`Class Group` == "A") %>%
+  count(`Likes (tokenized)`, sort = TRUE) %>%
+  top_n(9) %>%
+  mutate(`Likes (tokenized)` = reorder(`Likes (tokenized)`, n)) %>%
+  ggplot() +
+  geom_col(aes(`Likes (tokenized)`, n), fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  xlab("Word in Course Evaluation") +
+  ylab("Number of Times Used (Term Frequency)") +
+  ggtitle("Most Frequently Used Words in Course Evaluation Likes for Group A Students") +
+  coord_flip()
+
+# Repeat the above code for Group B and Group C students
+
+### Top 10 words per group ----
+popular_words <- evaluation_likes_filtered %>%
+  group_by(`Class Group`) %>%
+  count(`Likes (tokenized)`, `Class Group`, sort = TRUE) %>%
+  slice(seq_len(10)) %>%
+  ungroup() %>%
+  arrange(`Class Group`, n) %>%
+  mutate(row = row_number())
+
+popular_words %>%
+  ggplot(aes(row, n, fill = `Class Group`)) +
+  geom_col(fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  labs(x = "Word in Course Evaluation", y = "Number of Times Used") +
+  ggtitle("Most Frequently Used Words in Course Evaluation Likes per Class Group") +
+  facet_wrap(~`Class Group`, scales = "free") +
+  scale_x_continuous(
+    breaks = popular_words$row,
+    labels = popular_words$`Likes (tokenized)`) +
+  coord_flip()
+
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Create a bar chart for the most frequently used words in course evaluation wishes for female students.
+evaluation_wishes_filtered %>%
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`, `Wishes (tokenized)`) %>%
+  filter(`Student's Gender` == "Female") %>%
+  count(`Wishes (tokenized)`, sort = TRUE) %>%
+  top_n(9) %>%
+  mutate(`Wishes (tokenized)` = reorder(`Wishes (tokenized)`, n)) %>%
+  ggplot() +
+  geom_col(aes(`Wishes (tokenized)`, n), fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  xlab("Word in Course Evaluation") +
+  ylab("Number of Times Used (Term Frequency)") +
+  ggtitle("Most Frequently Used Words in Course Evaluation Wishes for Female
+          Students") +
+  coord_flip()
+
+# Create a similar bar chart for the most frequently used words in course evaluation wishes for male students.
+evaluation_wishes_filtered %>%
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`, `Wishes (tokenized)`) %>%
+  filter(`Student's Gender` == "Male") %>%
+  count(`Wishes (tokenized)`, sort = TRUE) %>%
+  top_n(9) %>%
+  mutate(`Wishes (tokenized)` = reorder(`Wishes (tokenized)`, n)) %>%
+  ggplot() +
+  geom_col(aes(`Wishes (tokenized)`, n), fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  xlab("Word in Course Evaluation") +
+  ylab("Number of Times Used (Term Frequency)") +
+  ggtitle("Most Frequently Used Words in Course Evaluation Wishes for Male
+          Students") +
+  coord_flip()
+
+# Create a bar chart showing the most frequently used words in course evaluation wishes for each gender.
+popular_words <- evaluation_wishes_filtered %>%
+  group_by(`Student's Gender`) %>%
+  count(`Wishes (tokenized)`, `Student's Gender`, sort = TRUE) %>%
+  slice(seq_len(10)) %>%
+  ungroup() %>%
+  arrange(`Student's Gender`, n) %>%
+  mutate(row = row_number())
+
+popular_words %>%
+  ggplot(aes(row, n, fill = `Student's Gender`)) +
+  geom_col(fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  labs(x = "Word in Course Evaluation", y = "Number of Times Used") +
+  ggtitle("Most Frequently Used Words in Course Evaluation Wishes per Gender") +
+  facet_wrap(~`Student's Gender`, scales = "free") +
+  scale_x_continuous(
+                     breaks = popular_words$row,
+                     labels = popular_words$`Wishes (tokenized)`) +
+  coord_flip()
+
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Create a bar chart to visualize the most frequently used words in course evaluation wishes for Group A students.
+evaluation_wishes_filtered %>%
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`, `Wishes (tokenized)`) %>%
+  filter(`Class Group` == "A") %>%
+  count(`Wishes (tokenized)`, sort = TRUE) %>%
+  top_n(9) %>%
+  mutate(`Wishes (tokenized)` = reorder(`Wishes (tokenized)`, n)) %>%
+  ggplot() +
+  geom_col(aes(`Wishes (tokenized)`, n), fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  xlab("Word in Course Evaluation") +
+  ylab("Number of Times Used (Term Frequency)") +
+  ggtitle("Most Frequently Used Words in Course Evaluation Wishes for Group A
+          Students") +
+  coord_flip()
+
+# Create a similar bar chart for Group B students.
+evaluation_wishes_filtered %>%
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`, `Wishes (tokenized)`) %>%
+  filter(`Class Group` == "B") %>%
+  count(`Wishes (tokenized)`, sort = TRUE) %>%
+  top_n(9) %>%
+  mutate(`Wishes (tokenized)` = reorder(`Wishes (tokenized)`, n)) %>%
+  ggplot() +
+  geom_col(aes(`Wishes (tokenized)`, n), fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  xlab("Word in Course Evaluation") +
+  ylab("Number of Times Used (Term Frequency)") +
+  ggtitle("Most Frequently Used Words in Course Evaluation Wishes for Group B
+          Students") +
+  coord_flip()
+
+# Create a similar bar chart for Group C students.
+evaluation_wishes_filtered %>%
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`, `Wishes (tokenized)`) %>%
+  filter(`Class Group` == "C") %>%
+  count(`Wishes (tokenized)`, sort = TRUE) %>%
+  top_n(9) %>%
+  mutate(`Wishes (tokenized)` = reorder(`Wishes (tokenized)`, n)) %>%
+  ggplot() +
+  geom_col(aes(`Wishes (tokenized)`, n), fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  xlab("Word in Course Evaluation") +
+  ylab("Number of Times Used (Term Frequency)") +
+  ggtitle("Most Frequently Used Words in Course Evaluation Wishes for Group C
+          Students") +
+  coord_flip()
+
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Calculate the term frequency (number of times used) of words in course evaluation wishes for each class group (A, B, C).
+popular_words <- evaluation_wishes_filtered %>%
+  group_by(`Class Group`) %>%
+  count(`Wishes (tokenized)`, `Class Group`, sort = TRUE) %>%
+  slice(seq_len(10)) %>%
+  ungroup() %>%
+  arrange(`Class Group`, n) %>%
+  mutate(row = row_number())
+
+# Create a grouped bar chart to visualize the most frequently used words in course evaluation wishes for each class group.
+popular_words %>%
+  ggplot(aes(row, n, fill = `Class Group`)) +
+  geom_col(fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  labs(x = "Word in Course Evaluation",
+       y = "Number of Times Used (Term Frequency)") +
+  ggtitle("Most Frequently Used Words in Course Evaluation Wishes per 
+          Class Group") +
+  facet_wrap(~`Class Group`, scales = "free") +
+  scale_x_continuous(
+                     breaks = popular_words$row,
+                     labels = popular_words$`Wishes (tokenized)`) +
+  coord_flip()
+
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Create a word cloud for evaluation likes
+evaluation_likes_filtered_cloud <- evaluation_likes_filtered %>% 
+  count(`Likes (tokenized)`, sort = TRUE)
+
+# Generate a word cloud visualization using the wordcloud2 package
+wordcloud2(evaluation_likes_filtered_cloud, size = .5)
+
+## Evaluation Wishes ----
+
+# Create a word cloud for evaluation wishes
+evaluation_wishes_filtered_cloud <- evaluation_wishes_filtered %>% 
+  count(`Wishes (tokenized)`, sort = TRUE)
+
+# Generate a word cloud visualization for evaluation wishes using the wordcloud2 package
+wordcloud2(evaluation_wishes_filtered_cloud, size = .5)
+
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Calculate TF-IDF scores for important words in course evaluation likes based on gender
+popular_tfidf_words_gender_likes <- evaluation_likes_filtered %>% 
+  unnest_tokens(word, `Likes (tokenized)`) %>%
+  distinct() %>%
+  filter(!word %in% undesirable_words) %>%
+  filter(nchar(word) > 3) %>%
+  rename(`Likes (tokenized)` = word) %>%
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`, `Likes (tokenized)`) %>%
+  count(`Student's Gender`, `Likes (tokenized)`, sort = TRUE) %>%
+  ungroup() %>%
+  bind_tf_idf(`Likes (tokenized)`, `Student's Gender`, n)
+
+# Display the head of the data frame containing TF-IDF scores
+head(popular_tfidf_words_gender_likes)
+
+# Arrange and prepare data for creating a bar chart of important words using TF-IDF by gender
+top_popular_tfidf_words <- popular_tfidf_words_gender_likes %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(`Likes (tokenized)` =
+           factor(`Likes (tokenized)`,
+                  levels = rev(unique(`Likes (tokenized)`)))) %>%
+  group_by(`Student's Gender`) %>%
+  slice(seq_len(10)) %>%
+  ungroup() %>%
+  arrange(`Student's Gender`, tf_idf) %>%
+  mutate(row = row_number())
+
+# Create a bar chart showing the most important words by TF-IDF score for course evaluation likes
+top_popular_tfidf_words %>%
+  ggplot(aes(x = row, tf_idf, fill = `Student's Gender`)) +
+  geom_col(fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  labs(x = "Word in Course Evaluation", y = "TF-IDF Score") +
+  ggtitle("Important Words using TF-IDF by Chart Level") +
+  ggtitle("Most Important Words by TF-IDF Score in Course Evaluation Likes per 
+      Class Group") +
+  facet_wrap(~`Student's Gender`, scales = "free") +
+  scale_x_continuous(
+                     breaks = top_popular_tfidf_words$row,
+                     labels = top_popular_tfidf_words$`Likes (tokenized)`) +
+  coord_flip()
+
+### TF-IDF Score per Group ----
+
+# Calculate TF-IDF scores for important words in course evaluation likes based on class group
+popular_tfidf_words_likes <- evaluation_likes_filtered %>% 
+  unnest_tokens(word, `Likes (tokenized)`) %>%
+  distinct() %>%
+  filter(!word %in% undesirable_words) %>%
+  filter(nchar(word) > 3) %>%
+  rename(`Likes (tokenized)` = word) %>%
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`, `Likes (tokenized)`) %>%
+  count(`Class Group`, `Likes (tokenized)`, sort = TRUE) %>%
+  ungroup() %>%
+  bind_tf_idf(`Likes (tokenized)`, `Class Group`, n)
+
+# Display the head of the data frame containing TF-IDF scores
+head(popular_tfidf_words_likes)
+
+# Arrange and prepare data for creating a bar chart of important words using TF-IDF by class group
+top_popular_tfidf_words <- popular_tfidf_words_likes %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(`Likes (tokenized)` =
+           factor(`Likes (tokenized)`,
+                  levels = rev(unique(`Likes (tokenized)`)))) %>%
+  group_by(`Class Group`) %>%
+  slice(seq_len(10)) %>%
+  ungroup() %>%
+  arrange(`Class Group`, tf_idf) %>%
+  mutate(row = row_number())
+
+# Create a bar chart showing the most important words by TF-IDF score for course evaluation likes by class group
+top_popular_tfidf_words %>%
+  ggplot(aes(x = row, tf_idf, fill = `Class Group`)) +
+  geom_col(fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  labs(x = "Word in Course Evaluation", y = "TF-IDF Score") +
+  ggtitle("Important Words using TF-IDF by Chart Level") +
+  ggtitle("Most Important Words by TF-IDF Score in Course Evaluation Likes per 
+      Class Group") +
+  facet_wrap(~`Class Group`, scales = "free") +
+  scale_x_continuous(
+                     breaks = top_popular_tfidf_words$row,
+                     labels = top_popular_tfidf_words$`Likes (tokenized)`) +
+  coord_flip()
+
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Calculate TF-IDF scores for important words in course evaluation wishes based on gender
+popular_tfidf_words_gender_wishes <- evaluation_wishes_filtered %>% 
+  unnest_tokens(word, `Wishes (tokenized)`) %>%
+  distinct() %>%
+  filter(!word %in% undesirable_words) %>%
+  filter(nchar(word) > 3) %>%
+  rename(`Wishes (tokenized)` = word) %>%
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`, `Wishes (tokenized)`) %>%
+  count(`Student's Gender`, `Wishes (tokenized)`, sort = TRUE) %>%
+  ungroup() %>%
+  bind_tf_idf(`Wishes (tokenized)`, `Student's Gender`, n)
+
+# Display the head of the data frame containing TF-IDF scores
+head(popular_tfidf_words_gender_wishes)
+
+# Arrange and prepare data for creating a bar chart of important words using TF-IDF by gender
+top_popular_tfidf_words <- popular_tfidf_words_gender_wishes %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(`Wishes (tokenized)` =
+           factor(`Wishes (tokenized)`,
+                  levels = rev(unique(`Wishes (tokenized)`)))) %>%
+  group_by(`Student's Gender`) %>%
+  slice(seq_len(10)) %>%
+  ungroup() %>%
+  arrange(`Student's Gender`, tf_idf) %>%
+  mutate(row = row_number())
+
+# Create a bar chart showing the most important words by TF-IDF score for course evaluation wishes
+top_popular_tfidf_words %>%
+  ggplot(aes(x = row, tf_idf, fill = `Student's Gender`)) +
+  geom_col(fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  labs(x = "Word in Course Evaluation", y = "TF-IDF Score") +
+  ggtitle("Important Words using TF-IDF by Chart Level") +
+  ggtitle("Most Important Words by TF-IDF Score in Course Evaluation Wishes per 
+      Class Group") +
+  facet_wrap(~`Student's Gender`, scales = "free") +
+  scale_x_continuous(
+                     breaks = top_popular_tfidf_words$row,
+                     labels = top_popular_tfidf_words$`Wishes (tokenized)`) +
+  coord_flip()
+
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Calculate TF-IDF scores for important words in course evaluation wishes based on class groups
+popular_tfidf_words_likes <- evaluation_wishes_filtered %>% 
+  unnest_tokens(word, `Wishes (tokenized)`) %>%
+  distinct() %>%
+  filter(!word %in% undesirable_words) %>%
+  filter(nchar(word) > 3) %>%
+  rename(`Wishes (tokenized)` = word) %>%
+  select(`Class Group`, `Student's Gender`,
+         `Average Course Evaluation Rating`, `Wishes (tokenized)`) %>%
+  count(`Class Group`, `Wishes (tokenized)`, sort = TRUE) %>%
+  ungroup() %>%
+  bind_tf_idf(`Wishes (tokenized)`, `Class Group`, n)
+
+# Display the head of the data frame containing TF-IDF scores
+head(popular_tfidf_words_likes)
+
+# Arrange and prepare data for creating a bar chart of important words using TF-IDF by class group
+top_popular_tfidf_words <- popular_tfidf_words_likes %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(`Wishes (tokenized)` =
+           factor(`Wishes (tokenized)`,
+                  levels = rev(unique(`Wishes (tokenized)`)))) %>%
+  group_by(`Class Group`) %>%
+  slice(seq_len(10)) %>%
+  ungroup() %>%
+  arrange(`Class Group`, tf_idf) %>%
+  mutate(row = row_number())
+
+# Create a bar chart showing the most important words by TF-IDF score for course evaluation wishes
+top_popular_tfidf_words %>%
+  ggplot(aes(x = row, tf_idf, fill = `Class Group`)) +
+  geom_col(fill = blue_grey_colours_1) +
+  blue_grey_theme() +
+  labs(x = "Word in Course Evaluation", y = "TF-IDF Score") +
+  ggtitle("Important Words using TF-IDF by Chart Level") +
+  ggtitle("Most Important Words by TF-IDF Score in Course Evaluation Wishes per 
+      Class Group") +
+  facet_wrap(~`Class Group`, scales = "free") +
+  scale_x_continuous(
+                     breaks = top_popular_tfidf_words$row,
+                     labels = top_popular_tfidf_words$`Wishes (tokenized)`) +
+  coord_flip()
+
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Fill this with R related code that will be executed when the R markdown file
+# is rendered using knitR
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Fill this with R related code that will be executed when the R markdown file
+# is rendered using knitR
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Fill this with R related code that will be executed when the R markdown file
+# is rendered using knitR
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Fill this with R related code that will be executed when the R markdown file
+# is rendered using knitR
+library(readr)
+
+```
+
+```{r Your Fifth Code Chunk}
+# Fill this with R related code that will be executed when the R markdown file
+# is rendered using knitR
+library(readr)
+
+```
