@@ -1,0 +1,406 @@
+---
+title: "Business Intelligence Lab Submission Markdown"
+author: "<Team_Alpha>"
+date: "<Specify the date when you submitted the lab>"
+output:
+  github_document: 
+    toc: yes
+    toc_depth: 4
+    fig_width: 6
+    fig_height: 4
+    df_print: default
+editor_options:
+  chunk_output_type: console
+  markdown: 
+    wrap: 72
+---
+
+# Student Details
+
++----------------------+----------------------+----------------------+
+| **Student ID Numbers | *\<list one student  | 1.  135478-          |
+| and Names of Group   | name, class group    |     Christopher      |
+| Members**            | (just the letter; A, |     Maina Ndemi      |
+|                      | B, or C), and ID per | 2.  135471- Shirley  |
+|                      | line, e.g., 123456 - |     Njoroge          |
+|                      | A - John Leposo; you | 3.  13 5218-Ombeka   |
+|                      | should be between 2  |     Albert           |
+|                      | and 5 members per    |                      |
+|                      | group\>* \| \|       |                      |
++----------------------+----------------------+----------------------+
+|                      | **GitHub Classroom   | T eam_Alpha\* \|     |
+|                      | Group Name**         |                      |
++----------------------+----------------------+----------------------+
+| **Course Code**      | BBT4206              |                      |
++----------------------+----------------------+----------------------+
+| **Course Name**      | Business             |                      |
+|                      | Intelligence II      |                      |
++----------------------+----------------------+----------------------+
+| **Program**          | Bachelor of Business |                      |
+|                      | Information          |                      |
+|                      | Technology           |                      |
++----------------------+----------------------+----------------------+
+| **Semester           | 21^st^ August 2023   |                      |
+| Duration**           | to 28^th^ November   |                      |
+|                      | 2023                 |                      |
++----------------------+----------------------+----------------------+
+
+# Setup Chunk
+
+We start by installing all the required packages
+
+```{r Install Packages, echo=TRUE, message=FALSE, warning=FALSE}
+## formatR - Required to format R code in the markdown ----
+if (!is.element("formatR", installed.packages()[, 1])) {
+  install.packages("formatR", dependencies = TRUE,
+                   repos="https://cloud.r-project.org")
+}
+require("formatR")
+
+
+## readr - Load datasets from CSV files ----
+if (!is.element("readr", installed.packages()[, 1])) {
+  install.packages("readr", dependencies = TRUE,
+                   repos="https://cloud.r-project.org")
+}
+require("readr")
+```
+
+------------------------------------------------------------------------
+
+**Note:** the following "*KnitR*" options have been set as the defaults
+in this markdown:\
+`knitr::opts_chunk$set(echo = TRUE, warning = FALSE, eval = TRUE, collapse = FALSE, tidy.opts = list(width.cutoff = 80), tidy = TRUE)`.
+
+More KnitR options are documented here
+<https://bookdown.org/yihui/rmarkdown-cookbook/chunk-options.html> and
+here <https://yihui.org/knitr/options/>.
+
+```{r setup, echo=TRUE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+	eval = TRUE,
+	echo = TRUE,
+	warning = FALSE,
+	collapse = FALSE,
+	tidy = TRUE
+)
+```
+
+------------------------------------------------------------------------
+
+**Note:** the following "*R Markdown*" options have been set as the
+defaults in this markdown:
+
+> output:\
+> \
+> github_document:\
+> toc: yes\
+> toc_depth: 4\
+> fig_width: 6\
+> fig_height: 4\
+> df_print: default\
+> \
+> editor_options:\
+> chunk_output_type: console
+
+# Loading the Student Performance Dataset
+
+The 20230412-20230719-BI1-BBIT4-1-StudentPerformanceDataset is then
+loaded. The dataset and its metadata are available here:
+<https://drive.google.com/drive/folders/1-BGEhfOwquXF6KKXwcvrx7WuZXuqmW9q?usp=sharing>
+
+```{r Load Dataset}
+library(dplyr)
+student_performance_dataset <-
+  read_csv("data/student_performance_dataset.csv",
+           col_types =
+             cols(
+               class_group = col_factor(levels = c("A", "B", "C")),
+               gender = col_factor(levels = c("1", "0")),
+               YOB = col_date(format = "%Y"),
+               regret_choosing_bi = col_factor(levels = c("1", "0")),
+               drop_bi_now = col_factor(levels = c("1", "0")),
+               motivator = col_factor(levels = c("1", "0")),
+               read_content_before_lecture =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               anticipate_test_questions =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               answer_rhetorical_questions =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               find_terms_I_do_not_know =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               copy_new_terms_in_reading_notebook =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               take_quizzes_and_use_results =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               reorganise_course_outline =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               write_down_important_points =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               space_out_revision =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               studying_in_study_group =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               schedule_appointments =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               goal_oriented = col_factor(levels = c("1", "0")),
+               spaced_repetition =
+                 col_factor(levels = c("1", "2", "3", "4")),
+               testing_and_active_recall =
+                 col_factor(levels = c("1", "2", "3", "4")),
+               interleaving = col_factor(levels = c("1", "2", "3", "4")),
+               categorizing = col_factor(levels = c("1", "2", "3", "4")),
+               retrospective_timetable =
+                 col_factor(levels = c("1", "2", "3", "4")),
+               cornell_notes = col_factor(levels = c("1", "2", "3", "4")),
+               sq3r = col_factor(levels = c("1", "2", "3", "4")),
+               commute = col_factor(levels = c("1", "2", "3", "4")),
+               study_time = col_factor(levels = c("1", "2", "3", "4")),
+               repeats_since_Y1 = col_integer(),
+               paid_tuition = col_factor(levels = c("0", "1")),
+               free_tuition = col_factor(levels = c("0", "1")),
+               extra_curricular = col_factor(levels = c("0", "1")),
+               sports_extra_curricular = col_factor(levels = c("0", "1")),
+               exercise_per_week = col_factor(levels = c("0", "1", "2", "3")),
+               meditate = col_factor(levels = c("0", "1", "2", "3")),
+               pray = col_factor(levels = c("0", "1", "2", "3")),
+               internet = col_factor(levels = c("0", "1")),
+               laptop = col_factor(levels = c("0", "1")),
+               family_relationships =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               friendships = col_factor(levels = c("1", "2", "3", "4", "5")),
+               romantic_relationships =
+                 col_factor(levels = c("0", "1", "2", "3", "4")),
+               spiritual_wellnes =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               financial_wellness =
+                 col_factor(levels = c("1", "2", "3", "4", "5")),
+               health = col_factor(levels = c("1", "2", "3", "4", "5")),
+               day_out = col_factor(levels = c("0", "1", "2", "3")),
+               night_out = col_factor(levels = c("0", "1", "2", "3")),
+               alcohol_or_narcotics =
+                 col_factor(levels = c("0", "1", "2", "3")),
+               mentor = col_factor(levels = c("0", "1")),
+               mentor_meetings = col_factor(levels = c("0", "1", "2", "3")),
+               `Attendance Waiver Granted: 1 = Yes, 0 = No` =
+                 col_factor(levels = c("0", "1")),
+               GRADE = col_factor(levels = c("A", "B", "C", "D", "E"))),
+           locale = locale())
+
+View(student_performance_dataset)
+
+```
+
+## Description of the Dataset
+
+We then display the number of observations and number of variables. We
+have 101 observations and 100 variables to work with.
+
+```{r Your Fourth Code Chunk}
+dim(student_performance_dataset)
+```
+
+Next, we display the quartiles for each numeric variable[*... think of
+this process as **"storytelling using the data."** Tell us what is
+happening; tell us what you are discovering as you proceed with the
+markdown; walk us through your code step-by-step (a code
+walkthrough).*]{#highlight style="color: blue"}
+
+```{r Your Fifth Code Chunk}
+summary(student_performance_dataset)
+```
+
+Describe the code chunk here.
+
+```{r Your Sixth Code Chunk}
+# Dimensions
+dim(student_performance_dataset)
+
+# Data Types
+sapply(student_performance_dataset, class)
+glimpse(student_performance_dataset)
+
+# Summary of each variable
+summary(student_performance_dataset)
+```
+
+## \<You Can Have a Sub-Title Here if you wish\>
+
+This is the code used allows operators to be used thanks to the dplyr
+package
+
+```{r Your Seventh Code Chunk}
+evaluation_per_group_per_gender <- student_performance_dataset %>% # nolint
+  mutate(`Student's Gender` =
+           ifelse(gender == 1, "Male", "Female")) %>%
+  select(class_group, gender,
+         `Student's Gender`, `Average Course Evaluation Rating`) %>%
+  filter(!is.na(`Average Course Evaluation Rating`)) %>%
+  group_by(class_group, `Student's Gender`) %>%
+  summarise(average_evaluation_rating =
+              mean(`Average Course Evaluation Rating`)) %>%
+  arrange(desc(average_evaluation_rating), .by_group = TRUE)
+```
+
+```{r Your Eighth Code Chunk # Plain tabular output}
+View(evaluation_per_group_per_gender)
+```
+
+Here the data is cleaned
+
+```{r Your Tenth Code Chunk}
+#contractions are removed 
+expand_contractions <- function(doc) {
+  doc <- gsub("I'm", "I am", doc, ignore.case = TRUE)
+  doc <- gsub("you're", "you are", doc, ignore.case = TRUE)
+  doc <- gsub("he's", "he is", doc, ignore.case = TRUE)
+  doc <- gsub("she's", "she is", doc, ignore.case = TRUE)
+  doc <- gsub("it's", "it is", doc, ignore.case = TRUE)
+  doc <- gsub("we're", "we are", doc, ignore.case = TRUE)
+  doc <- gsub("they're", "they are", doc, ignore.case = TRUE)
+  doc <- gsub("I'll", "I will", doc, ignore.case = TRUE)
+  doc <- gsub("you'll", "you will", doc, ignore.case = TRUE)
+  doc <- gsub("he'll", "he will", doc, ignore.case = TRUE)
+  doc <- gsub("she'll", "she will", doc, ignore.case = TRUE)
+  doc <- gsub("it'll", "it will", doc, ignore.case = TRUE)
+  doc <- gsub("we'll", "we will", doc, ignore.case = TRUE)
+  doc <- gsub("they'll", "they will", doc, ignore.case = TRUE)
+  doc <- gsub("won't", "will not", doc, ignore.case = TRUE)
+  doc <- gsub("can't", "cannot", doc, ignore.case = TRUE)
+  doc <- gsub("n't", " not", doc, ignore.case = TRUE)
+  return(doc)
+}
+
+# Evaluation likes and wishes
+# Evaluation likes and wishes
+# Evaluation likes and wishes
+library("dplyr")
+
+evaluation_likes_and_wishes <- student_performance_dataset %>%
+  mutate(`Student's Gender` =
+           ifelse(gender == 1, "Male", "Female")) %>%
+  rename(`Class Group` = class_group) %>%
+  rename(Likes = `Average Course Evaluation Rating`) %>%
+  rename(Wishes = `Average Level of Learning Attained Rating`) %>%
+  select(`Class Group`,
+         `Student's Gender`, Likes, Wishes) %>%
+  filter(!is.na(Likes)) %>%
+  arrange(`Class Group`)
+
+# Before expanding contractions
+View(evaluation_likes_and_wishes)
+
+evaluation_likes_and_wishes$Likes <- sapply(evaluation_likes_and_wishes$Likes, expand_contractions) # nolint
+evaluation_likes_and_wishes$Wishes <- sapply(evaluation_likes_and_wishes$Wishes, expand_contractions) # nolint
+
+# After expanding contractions
+View(evaluation_likes_and_wishes)
+
+remove_special_characters <- function(doc) {
+  gsub("[^a-zA-Z0-9 ]", "", doc, ignore.case = TRUE)
+}
+
+# Before removing special characters 
+View(evaluation_likes_and_wishes)
+
+evaluation_likes_and_wishes$Likes <- sapply(evaluation_likes_and_wishes$Likes, remove_special_characters) # nolint
+evaluation_likes_and_wishes$Wishes <- sapply(evaluation_likes_and_wishes$Wishes, remove_special_characters) # nolint
+
+# Convert everything to lower case (to standardize the text)
+evaluation_likes_and_wishes$Likes <- sapply(evaluation_likes_and_wishes$Likes, tolower) # nolint
+evaluation_likes_and_wishes$Wishes <- sapply(evaluation_likes_and_wishes$Wishes, tolower) # nolint
+
+# After removing special characters and converting everything to lower case
+View(evaluation_likes_and_wishes)
+
+# [OPTIONAL] You can save the file as a CSV at this point
+write.csv(evaluation_likes_and_wishes,
+          file = "data/evaluation_likes_and_wishes.csv",
+          row.names = FALSE)
+```
+
+Here Lemmatization is carried out over Stemming as it is more effective.
+The dependent packages are also loaded
+
+```{r Your eleventh code chunk}
+library(tidyverse)
+library(tidytext)
+library(tm)
+
+student_performance_dataset <- read_csv("data/student_performance_dataset.csv",
+                                        col_types = cols(
+                                          class_group = col_factor(levels = c("A", "B", "C")),
+                                          gender = col_factor(levels = c("1", "0")),
+                                          YOB = col_date(format = "%Y"),
+                                          regret_choosing_bi = col_factor(levels = c("1", "0")),  # Keep this as a factor
+                                          drop_bi_now = col_factor(levels = c("1", "0")),  # Keep this as a factor
+                                          # ... other columns ...
+                                          GRADE = col_factor(levels = c("A", "B", "C", "D", "E"))
+                                        ),
+                                        locale = locale())
+
+# Specify the text columns you want to tokenize
+text_columns <- c("regret_choosing_bi", "drop_bi_now")  # Replace with actual column names
+
+# Identify text columns and tokenize them
+tokenized_data <- student_performance_dataset %>%
+  select(all_of(text_columns)) %>%
+  mutate(across(where(is.character), ~unnest_tokens(.x, .x, token = "words")))  # Tokenization method may vary
+
+# Create a corpus from the tokenized data
+corpus <- Corpus(VectorSource(unlist(tokenized_data)))
+
+# Apply stemming to the corpus
+corpus_stemmed <- tm_map(corpus, stemDocument)
+
+# Convert the stemmed corpus back to a data frame
+tokenized_data_stemmed <- data.frame(
+  text = sapply(corpus_stemmed, as.character),
+  stringsAsFactors = FALSE
+)
+
+
+# View the tokenized and stemmed data
+View(tokenized_data_stemmed)
+
+```
+
+After lemmatization, tokenization is carried out. Other operations such
+as censorship can also be done. Dependent packages are also loaded
+
+```{r Your twelvth code chunk}
+library(tidyverse)
+library(tidytext)
+
+# Read the student performance dataset
+student_performance_dataset <- read_csv("data/student_performance_dataset.csv",
+                                        col_types = cols(
+                                          class_group = col_factor(levels = c("A", "B", "C")),
+                                          gender = col_factor(levels = c("1", "0")),
+                                          YOB = col_date(format = "%Y"),
+                                          # ... other columns ...
+                                          GRADE = col_factor(levels = c("A", "B", "C", "D", "E"))
+                                        ),
+                                        locale = locale())
+
+# Specify the text columns you want to tokenize
+text_columns <- c("regret_choosing_bi", "drop_bi_now")  # Replace with actual column names
+
+# Tokenize the text columns
+tokenized_data <- student_performance_dataset %>%
+  select(all_of(text_columns)) %>%
+  mutate(across(where(is.character), ~unnest_tokens(.x, text, token = "words")))  # Tokenization method may vary
+
+# View the tokenized data
+View(tokenized_data)
+
+```
+
+Here a word count is done
+
+```{r Your thirteenth code chunk}
+head(sample(stop_words$word, 20), 20)
+undesirable_words <- c("wow", "lol", "none", "na")
+
+
+```
